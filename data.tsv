@@ -1,6 +1,0 @@
-date	target	type	amount	value_1	fee_1	value_2	fee_2
-2026-01-01	AMZN	buy	20	1000	0.1	1000	0.1
-2026-01-30	TSLA	buy	10	1000	0.1	1000	0.1
-2026-03-26	AMZN	div	20	20	1.2	20	1.2
-2026-04-10	TSLA	sell	10	1005	0.1	1005	0.1
-2026-05-31	AMZN	sell	5	900	0.1	900	0.1
