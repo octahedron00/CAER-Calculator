@@ -40,10 +40,26 @@ def main():
 
     portfolio_sold = {}
 
-    date_min = 0
-    date_max = datetime.now()
+    date_min = df["Date"].min()
+    date_max = df["Date"].max()
+
+    stock_list = df["Stock"].unique().tolist()
 
     # date에 따른 total cost 계산 필요. 얼마나 많이, 얼마나 오래 가지고 있었는가!
+    
+    asset_amount_over_time = []
+
+    start_asset_amount = {
+        "Date": date_min,
+        "Total1": 0,
+        "Total2": 0,
+    }
+
+    for stock in stock_list:
+        start_asset_amount[stock+"1"] = 0
+        start_asset_amount[stock+"2"] = 0
+
+    asset_amount_over_time.append(start_asset_amount)
 
     for _, row in df.iterrows():    
         stock = row["Stock"]
@@ -56,6 +72,9 @@ def main():
             date_min = date
         if date > date_max:
             date_max = date
+
+        cost_original1 = 0
+        cost_original2 = 0
 
         print(f"Processing {change_type} of {shares} shares of {stock} at ${cost1} on {date}")
 
@@ -85,6 +104,8 @@ def main():
             stocks_to_sell = shares
             for purchase in portfolio[stock]:
                 sold_purchase, leftover_purchase, stocks_to_sell = split_purchase(purchase, stocks_to_sell, date, cost1, cost2)
+                cost_original1 += sold_purchase["Cost1"]
+                cost_original2 += sold_purchase["Cost2"]
                 portfolio_sold[stock].append(sold_purchase)
                 if stocks_to_sell == 0 and leftover_purchase is not None:
                     purchase = leftover_purchase
@@ -97,6 +118,33 @@ def main():
                 if purchase["Shares"] > 0:
                     purchase["Acc_dividend1"] += cost1
                     purchase["Acc_dividend2"] += cost2
+
+
+        asset_amount = asset_amount_over_time[-1].copy()
+    
+        date = pd.to_datetime(row["Date"])
+
+        if change_type == "buy":
+            asset_amount[stock+"1"] += cost1
+            asset_amount[stock+"2"] += cost2
+            asset_amount["Total1"] += cost1
+            asset_amount["Total2"] += cost2
+        elif change_type == "sell":
+            asset_amount[stock+"1"] -= cost_original1
+            asset_amount[stock+"2"] -= cost_original2
+            asset_amount["Total1"] -= cost_original1
+            asset_amount["Total2"] -= cost_original2
+
+        asset_amount["Date"] = date
+
+        if asset_amount_over_time[-1]["Date"] != date:
+            before_asset_amount = asset_amount_over_time[-1].copy()
+            before_asset_amount["Date"] = date
+
+            asset_amount_over_time.append(before_asset_amount)
+            asset_amount_over_time.append(asset_amount)
+        else:
+            asset_amount_over_time[-1] = asset_amount
 
 
     for stock, purchases in portfolio.items():
@@ -229,6 +277,17 @@ def main():
 
     df_total_sold_sheet = df_total_sold[["Stock", "Shares", "Date_buy", "Date_sell", "Date_delta", "Cost1", "Sold1", "Acc_dividend1", "Total_profit1", "Total_profit_ratio1", "Profit_ratio1", "Dividend_ratio1", "CAER1", "CAER_market1", "CAER_dividend1", "Cost2", "Sold2", "Acc_dividend2", "Total_profit2", "Total_profit_ratio2", "Profit_ratio2", "Dividend_ratio2", "CAER2", "CAER_market2", "CAER_dividend2"]]
     df_total_sold_sheet.to_excel("profit_raw.xlsx", index=False)
+
+
+
+
+
+    asset_amount_over_time_df = pd.DataFrame(asset_amount_over_time)
+    asset_amount_over_time_df_sheet = asset_amount_over_time_df[["Date", "Total1"] + [stock+"1" for stock in portfolio.keys()] + ["Total2"] + [stock+"2" for stock in portfolio.keys()]]
+    asset_amount_over_time_df_sheet.to_excel("assets_over_time.xlsx", index=False)
+
+
+
 
 
 if __name__ == "__main__":
